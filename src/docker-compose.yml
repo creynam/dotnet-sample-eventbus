@@ -1,0 +1,27 @@
+version: "3.9"
+
+services: 
+  seq: 
+    image: datalust/seq:latest
+  
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    
+  sql.data:
+    image: mcr.microsoft.com/mssql/server:2017-latest
+
+  sample.eb.api:
+    build:
+      context: .
+      dockerfile: SampleEB/SampleEB.API/Dockerfile
+    depends_on: 
+      - rabbitmq
+      - sql.data
+
+  sample.eb.tasks:
+    build:
+      context: .
+      dockerfile: SampleEB/SampleEB.Tasks/Dockerfile
+    depends_on: 
+      - rabbitmq
+      - sample.eb.api

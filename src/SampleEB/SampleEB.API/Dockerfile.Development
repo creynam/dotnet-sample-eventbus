@@ -1,0 +1,35 @@
+FROM mcr.microsoft.com/dotnet/sdk:3.1
+ARG BUILD_CONFIGURATION=Debug
+ENV ASPNETCORE_URLS=http://+
+ENV ASPNETCORE_ENVIRONMENT=Development
+ENV SampleApi_CheckUpdateTime=30000
+ENV SampleApi_Serilog__SeqServerUrl=http://host.docker.internal:5100/
+ENV SampleApi_EventBusConnection=host.docker.internal
+ENV SampleApi_ConnectionStrings__SampleDB="Server=host.docker.internal,5433;Database=SampleDB;User Id=sa;Password=Pass@word"
+ENV SampleApi_ConnectionStrings__IntegrationEventLog="Server=host.docker.internal,5433;Database=SampleDB;User Id=sa;Password=Pass@word"
+#ENV SampleApi_RabbitMQ__UserName=${SAMPLE_SERVICE_BUS_USERNAME}
+#ENV SampleApi_RabbitMQ__Password=${SAMPLE_SERVICE_BUS_PASSWORD}
+EXPOSE 80
+
+COPY BuildingBlocks/EventBus/EventBus/EventBus.csproj src/BuildingBlocks/EventBus/EventBus/
+COPY BuildingBlocks/EventBus/EventBus.Tests/EventBus.Tests.csproj src/BuildingBlocks/EventBus/EventBus.Tests/
+COPY BuildingBlocks/EventBus/EventBusRabbitMQ/EventBusRabbitMQ.csproj src/BuildingBlocks/EventBus/EventBusRabbitMQ/
+COPY BuildingBlocks/EventBus/EventBusServiceBus/EventBusServiceBus.csproj src/BuildingBlocks/EventBus/EventBusServiceBus/
+COPY BuildingBlocks/EventBus/IntegrationEventLogEF/IntegrationEventLogEF.csproj src/BuildingBlocks/EventBus/IntegrationEventLogEF/
+COPY BuildingBlocks/WebHostCustomization/WebHost.Customization/WebHost.Customization.csproj src/BuildingBlocks/WebHostCustomization/WebHost.Customization/
+COPY SampleEB/SampleEB.API/SampleEB.API.csproj src/SampleEB/SampleEB.API/
+COPY SampleEB/SampleEB.Domain/SampleEB.Domain.csproj src/SampleEB/SampleEB.Domain/
+COPY SampleEB/SampleEB.Persistence/SampleEB.Persistence.csproj src/SampleEB/SampleEB.Persistence/
+COPY SampleEB/SampleEB.Tasks/SampleEB.Tasks.csproj src/SampleEB/SampleEB.Tasks/
+
+RUN dotnet restore src/SampleEB/SampleEB.API
+
+COPY BuildingBlocks/ src/BuildingBlocks/
+COPY SampleEB/SampleEB.API src/SampleEB/SampleEB.API
+COPY SampleEB/SampleEB.Domain src/SampleEB/SampleEB.Domain
+COPY SampleEB/SampleEB.Persistence src/SampleEB/SampleEB.Persistence
+
+WORKDIR /src/SampleEB/SampleEB.API/
+RUN dotnet build --no-restore -c $BUILD_CONFIGURATION
+
+ENTRYPOINT ["dotnet", "run", "--no-build", "--no-launch-profile", "--"]

@@ -1,0 +1,51 @@
+version: '3.9'
+
+# The default docker-compose.override file can use the "localhost" as the external name for testing web apps within the same dev machine. 
+# An external IP or DNS name has to be used (instead localhost and the 10.0.75.1 IP) when testing the Web apps and the Xamarin apps from remote machines/devices using the same WiFi, for instance.
+
+services:
+  seq:
+    environment:
+      - ACCEPT_EULA=Y
+    ports:
+      - "5100:80"
+
+  sql.data:
+    environment:
+      - SA_PASSWORD=Pass@word
+      - ACCEPT_EULA=Y
+    ports:
+      - "5433:1433"    # Important: In a production environment your should remove the external port
+
+  rabbitmq:
+    ports:
+      - "15672:15672"  # Important: In a production environment your should remove the external port
+      - "5672:5672"  # Important: In a production environment your should remove the external port
+
+  sample.eb.api:
+    environment: 
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+
+      - SampleApi_ConnectionStrings__SampleDB=${SAMPLE_AZURE_DB:-Server=sql.data;Database=SampleDB;User Id=sa;Password=Pass@word}
+      - SampleApi_ConnectionStrings__IntegrationEventLog=${SAMPLE_AZURE_DB:-Server=sql.data;Database=SampleDB;User Id=sa;Password=Pass@word}
+      - SampleApi_AzureServiceBusEnabled=False
+      - SampleApi_CheckUpdateTime=30000
+      - SampleApi_EventBusConnection=${SAMPLE_AZURE_SERVICE_BUS:-rabbitmq}
+      - SampleApi_RabbitMQ__UserName=${SAMPLE_SERVICE_BUS_USERNAME}
+      - SampleApi_RabbitMQ__Password=${SAMPLE_SERVICE_BUS_PASSWORD}
+    ports:
+      - "5000:80"   # Important: In a production environment your should remove the external port (5100) kept here for microservice debugging purposes. 
+                    # The API Gateway redirects and access through the internal port (80).
+
+  sample.eb.tasks:
+    environment: 
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+
+      - SampleTasks_AzureServiceBusEnabled=False
+      - SampleTasks_CheckUpdateTime=30000
+      - SampleTasks_EventBusConnection=${SAMPLE_AZURE_SERVICE_BUS:-rabbitmq}
+      - SampleTasks_RabbitMQ__UserName=${SAMPLE_SERVICE_BUS_USERNAME}
+      - SampleTasks_RabbitMQ__Password=${SAMPLE_SERVICE_BUS_PASSWORD}
+    ports:
+      - "5002:80"   # Important: In a production environment your should remove the external port (5100) kept here for microservice debugging purposes. 
+                    # The API Gateway redirects and access through the internal port (80).
